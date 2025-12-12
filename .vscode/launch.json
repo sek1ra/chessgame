@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "java",
+        "name": "Run Chess Game",
+        "request": "launch",
+        "mainClass": "com.example.aleksei.chessgame.App",
+        "vmArgs": "--module-path C:/Users/sek1r/OneDrive/_works/javafx/lib --add-modules javafx.controls,javafx.fxml"
+      }
+    ]
+  }
+  
