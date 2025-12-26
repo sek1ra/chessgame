@@ -176,7 +176,6 @@ public class Board {
             }
         }
 
-
         // Pawn jump flag (двойной шаг)
         if (mover instanceof Pawn pawn) {
             pawn.setIsJumped(Math.abs(dr) == 2);
@@ -187,6 +186,12 @@ public class Board {
         // основной перенос
         settledPieces[toR][toC] = mover;
         settledPieces[fromR][fromC] = null;
+
+        if (mover instanceof Pawn) {
+            if ((mover.isWhite() && toR == 0) || (!mover.isWhite() && toR == 7)) {
+                settledPieces[toR][toC] = new Queen(mover.isWhite());
+            }
+        }
 
         return true;
     }
