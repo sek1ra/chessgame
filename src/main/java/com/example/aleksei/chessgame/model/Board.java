@@ -23,6 +23,10 @@ public class Board {
         return settledPieces[cell.row()][cell.col()];
     }
 
+    /**
+     * Initializes the board to the standard chess starting position.
+     * Clears the board and places all pieces in their initial squares.
+     */
     public void initSettlePieces() {
         //reset board
         for (int i = 0; i < 8; i++) {
@@ -58,10 +62,22 @@ public class Board {
         settledPieces[0][4] = new King(false);
     }
 
+    /**
+     * Returns the current board state.
+     *
+     * @return 2D array representing pieces on the board
+     */
     public Piece[][] getSettledPieces() {
         return settledPieces;
     }
 
+    /**
+     * Creates a shallow copy of the given board position.
+     * Piece objects themselves are not cloned.
+     *
+     * @param board source board
+     * @return copied board array
+     */
     private Piece[][] copyBoard(Piece[][] board) {
         Piece[][] copy = new Piece[8][8];
         for (int r = 0; r < 8; r++) {
@@ -70,85 +86,115 @@ public class Board {
         return copy;
     }
 
+    /**
+     * Simulates a move on a copied board without modifying the real game state.
+     * Supports special moves such as en passant and castling.
+     * Does not update piece state flags (wasMoved, isJumped).
+     *
+     * @param pieces source board
+     * @param from starting cell
+     * @param to target cell
+     * @return new board position after the simulated move
+     */
     private Piece[][] makePseudoMove(Piece[][] pieces, Cell from, Cell to) {
         Piece[][] copy = copyBoard(pieces);
-        if (copy[from.row()][from.col()] != null) {
-            copy[to.row()][to.col()] = copy[from.row()][from.col()];
-            copy[from.row()][from.col()] = null;
+        Piece mover = copy[from.row()][from.col()];
+        if (mover == null) return copy;
+
+        int dr = to.row() - from.row();
+        int dc = to.col() - from.col();
+
+        // EN PASSANT: пешка идёт по диагонали в пустую клетку -> убрать пешку "сзади"
+        if (mover instanceof Pawn && Math.abs(dc) == 1 && Math.abs(dr) == 1 && copy[to.row()][to.col()] == null) {
+            Piece victim = copy[from.row()][to.col()];
+            if (victim instanceof Pawn && victim.isWhite() != mover.isWhite()) {
+                copy[from.row()][to.col()] = null;
+            }
         }
+
+
+        // CASTLING: король идёт на 2 клетки -> двигаем ладью
+        if (mover instanceof King && Math.abs(dc) == 2) {
+            int rookFromCol = (dc > 0) ? 7 : 0;
+            int rookToCol   = (dc > 0) ? to.col() - 1 : to.col() + 1;
+
+            Piece rook = copy[from.row()][rookFromCol];
+            copy[from.row()][rookToCol] = rook;
+            copy[from.row()][rookFromCol] = null;
+        }
+
+        copy[to.row()][to.col()] = mover;
+        copy[from.row()][from.col()] = null;
         return copy;
     }
+
+    /**
+     * Executes a legal move from the active cell to the given target cell.
+     * Handles special moves (en passant, castling) and updates piece state.
+     *
+     * @param cell target cell
+     * @return true if the move was executed, false otherwise
+     */
     public boolean move(Cell cell) {
-        if (activeCell == null) {
-            return false;
-        }
+        if (activeCell == null) return false;
 
-        List<Cell> availableMoves = getLegalMoves(activeCell);
-        for (Cell aCell : availableMoves) {
-            System.out.println(aCell);
-        }
+        List<Cell> legalMoves = getLegalMoves(activeCell);
+        if (!legalMoves.contains(cell)) return false;
 
-        //Check if piece is pawn and it can take another piece on PROHODE TODO review this comment
-        //Check if king can make ROKEROVKA TODO review this comment
-        //if pawn pawn can take another piece on PROHODE TODO review this comment
-        Piece pieceToCheck = settledPieces[activeCell.row()][activeCell.col()];
-        if (pieceToCheck instanceof Pawn) {
-            int direction = pieceToCheck.isWhite() ? -1 : 1;
-            int horisontalDirection = cell.col() - activeCell.col();
-            if (
-                activeCell.col() - 1 > -1 && 
-                settledPieces[activeCell.row()][activeCell.col() + horisontalDirection] != null &&
-                settledPieces[activeCell.row()][activeCell.col() + horisontalDirection] instanceof Pawn pawnToCheck &&
-                pawnToCheck.isJumped()
-            ) {
-                settledPieces[activeCell.row() + direction][activeCell.col() + horisontalDirection] = pieceToCheck;
-                settledPieces[activeCell.row()][activeCell.col() + horisontalDirection] = null;
-                settledPieces[activeCell.row()][activeCell.col()] = null;
-                return true;
+        Piece mover = settledPieces[activeCell.row()][activeCell.col()];
+        if (mover == null) return false;
+
+        int fromR = activeCell.row();
+        int fromC = activeCell.col();
+        int toR = cell.row();
+        int toC = cell.col();
+        int dr = toR - fromR;
+        int dc = toC - fromC;
+
+        // перед ходом сбрасываем en-passant флаги
+        resetJumpFlagsExcept();
+
+        // EN PASSANT execution: пешка диагональю в пустую клетку
+        if (mover instanceof Pawn && Math.abs(dc) == 1 && Math.abs(dr) == 1 && settledPieces[toR][toC] == null) {
+            // убрать пешку противника, стоящую рядом на исходной строке
+            Piece victim = settledPieces[fromR][toC];
+            if (victim instanceof Pawn && victim.isWhite() != mover.isWhite()) {
+                settledPieces[fromR][toC] = null;
             }
         }
 
-        // Check if king can make ROKEROVKA TODO review this comment
-        //For white
-        if (pieceToCheck instanceof King && pieceToCheck.isWhite() && !pieceToCheck.isWasMoved() )  {
-            //Check left
-            if (settledPieces[7][5] == null && settledPieces[7][6] == null) {
-                if (settledPieces[7][7] instanceof Rook rookToCheck && !rookToCheck.isWasMoved()) {
-                    if (
-                        !isCellAttacked(settledPieces, new Cell(7, 5), false)
-                        &&
-                        !isCellAttacked(settledPieces, new Cell(7, 6), false)
-                    ) {
+        // CASTLING execution: король на 2 клетки
+        if (mover instanceof King && Math.abs(dc) == 2) {
+            int rookFromCol = (dc > 0) ? 7 : 0;
+            int rookToCol   = (dc > 0) ? toC - 1 : toC + 1;
 
-                        //legalMoves.add(new Cell(7, 6));
-                    }
-                }
+            Piece rook = settledPieces[fromR][rookFromCol];
+            if (rook instanceof Rook && rook.isWhite() == mover.isWhite()) {
+                settledPieces[fromR][rookToCol] = rook;
+                settledPieces[fromR][rookFromCol] = null;
+                rook.setWasMoved(true);
             }
         }
 
-        if (availableMoves.contains(cell)) {
-            //if there is a piece
-            printBoard(settledPieces);
-            if (settledPieces[cell.row()][cell.col()] != null) {
-                if (settledPieces[cell.row()][cell.col()].isWhite() == settledPieces[activeCell.row()][activeCell.col()].isWhite()) {
-                    return false;
-                }
-            }
 
-            resetJumpFlagsExcept();
-            if (settledPieces[activeCell.row()][activeCell.col()] instanceof Pawn pawn ) {
-                pawn.setIsJumped(Math.abs(activeCell.row() - cell.row()) == 2);
-            }
-
-            settledPieces[activeCell.row()][activeCell.col()].setWasMoved(true);
-            settledPieces[cell.row()][cell.col()] = settledPieces[activeCell.row()][activeCell.col()];
-            settledPieces[activeCell.row()][activeCell.col()] = null;
-            return true;
+        // Pawn jump flag (двойной шаг)
+        if (mover instanceof Pawn pawn) {
+            pawn.setIsJumped(Math.abs(dr) == 2);
         }
 
-        return false;
+        mover.setWasMoved(true);
+
+        // основной перенос
+        settledPieces[toR][toC] = mover;
+        settledPieces[fromR][fromC] = null;
+
+        return true;
     }
 
+    /**
+     * Resets the en passant availability flag (isJumped) for all pawns.
+     * Called before executing a new move.
+     */
     private void resetJumpFlagsExcept() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
@@ -160,6 +206,12 @@ public class Board {
         }
     }
 
+    /**
+     * Prints the given board state to the console.
+     * Intended for debugging purposes.
+     *
+     * @param board board state to print
+     */
     void printBoard(Piece[][] board) {
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
@@ -173,34 +225,40 @@ public class Board {
         }
     }
 
+    /**
+     * Determines whether the specified king is currently in check.
+     *
+     * @param pieces board position to evaluate
+     * @param isWhiteKingChecked true to check the white king, false for the black king
+     * @return true if the king is in check, false otherwise
+     */
     public boolean isKingCheck(Piece[][] pieces, boolean isWhiteKingChecked) {
-        Cell cellToCheck = null;
-        //looking for king to check
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
-                if (
-                    pieces[row][col] != null && 
-                    pieces[row][col] instanceof King && 
-                    pieces[row][col].isWhite() == isWhiteKingChecked
-                ) {
-                    cellToCheck = new Cell(row, col);
+                Piece p = pieces[row][col];
+                if (p instanceof King && p.isWhite() == isWhiteKingChecked) {
+                    return isCellAttacked(pieces, new Cell(row, col), !isWhiteKingChecked);
                 }
             }
-        }
-
-        if (cellToCheck != null) {
-            return isCellAttacked(pieces, cellToCheck, !isWhiteKingChecked);
         }
         return false;
     }
 
+    /**
+     * Checks whether a given cell is attacked by any piece of the specified color.
+     *
+     * @param pieces board position
+     * @param cell target cell
+     * @param attackedByWhite true to check attacks by white pieces, false by black pieces
+     * @return true if the cell is attacked, false otherwise
+     */
     private boolean isCellAttacked(Piece[][] pieces, Cell cell, boolean attackedByWhite) {
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 Piece attacker = pieces[row][col];
                 if (attacker != null && attacker.isWhite() == attackedByWhite ) {
                     List<Cell> attackedCells = attacker.getAttackedCells(pieces, row, col);
-System.out.println("attackedCells  by r=" + row + ", c=" + col + " = " + attackedCells);
+
                     if (attackedCells != null && attackedCells.contains(cell)) {
                         return true;
                     }
@@ -210,71 +268,125 @@ System.out.println("attackedCells  by r=" + row + ", c=" + col + " = " + attacke
         return false;
     }
 
-    /*
-    @param cell - cell for check
-    @return List of cells available for legal move
-
-    this function get all available movies
-    filter it:
-    1. If king get check for self king after move
-    */
+    /**
+     * Returns all legal moves for the piece located at the given cell.
+     * Filters pseudo-legal moves by simulating them and removing moves
+     * that leave the player's king in check.
+     * Includes special moves such as en passant and castling.
+     *
+     * @param cell source cell
+     * @return list of legal destination cells
+     */
     public List<Cell> getLegalMoves(Cell cell) {
         Piece pieceToCheck = settledPieces[cell.row()][cell.col()];
-        if (pieceToCheck == null) {
-            return null;
-        }
+        if (pieceToCheck == null) return List.of();
 
         List<Cell> legalMoves = new ArrayList<>();
+        boolean sideWhite = pieceToCheck.isWhite();
 
-        //If king get check for self king after move
-        List<Cell> availMovies = pieceToCheck.getPsevdoAvailableMoves(settledPieces, cell.row(), cell.col());
-        for (Cell availCell : availMovies) {
-            Piece[][] pseudoPieces = makePseudoMove(settledPieces, cell, new Cell(availCell.row(), availCell.col()));
-            printBoard(pseudoPieces);
-            if (!isKingCheck(pseudoPieces, pseudoPieces[availCell.row()][availCell.col()].isWhite())) {
-                legalMoves.add(availCell);
+        // 1) обычные ходы через псевдоходы + фильтр шаха
+        for (Cell to : pieceToCheck.getPsevdoAvailableMoves(settledPieces, cell.row(), cell.col())) {
+            Piece[][] pseudo = makePseudoMove(settledPieces, cell, to);
+            if (!isKingCheck(pseudo, sideWhite)) {
+                legalMoves.add(to);
             }
         }
 
-        //if pawn pawn can take another piece on PROHODE TODO review this comment
-        if (pieceToCheck instanceof Pawn currentPawn) {
-            int direction = pieceToCheck.isWhite() ? -1 : 1;
-            if (
-                cell.col() - 1 > -1 && 
-                settledPieces[cell.row()][cell.col() - 1] != null &&
-                settledPieces[cell.row()][cell.col() - 1] instanceof Pawn pawnToCheck &&
-                pawnToCheck.isJumped()
-            ) {
-                legalMoves.add(new Cell(cell.row() + direction, cell.col() - 1));
-            }
-            if (
-                cell.col() + 1 < 8 && 
-                settledPieces[cell.row()][cell.col() + 1] != null &&
-                settledPieces[cell.row()][cell.col() + 1] instanceof Pawn pawnToCheck &&
-                pawnToCheck.isJumped()
-            ) {
-                legalMoves.add(new Cell(cell.row() + direction, cell.col() + 1));
-            }
-        }
+        // 2) EN PASSANT (как отдельные кандидаты, но тоже фильтруем через isKingCheck)
+        if (pieceToCheck instanceof Pawn) {
+            int direction = sideWhite ? -1 : 1;
+            int fromRow = cell.row();
+            int fromCol = cell.col();
+            int toRow = fromRow + direction;
 
+            // row bounds
+            if (toRow >= 0 && toRow < 8) {
 
-        // Check if king can make ROKEROVKA TODO review this comment
-        //For white
-        if (pieceToCheck instanceof King && pieceToCheck.isWhite() && !pieceToCheck.isWasMoved() )  {
-            //Check left
-            if (settledPieces[7][5] == null && settledPieces[7][6] == null) {
-                if (settledPieces[7][7] instanceof Rook rookToCheck && !rookToCheck.isWasMoved()) {
-                    if (
-                        !isCellAttacked(settledPieces, new Cell(7, 5), false)
-                        &&
-                        !isCellAttacked(settledPieces, new Cell(7, 6), false)
-                    ) {
-                        legalMoves.add(new Cell(7, 6));
+                // рекомендованная проверка "правильной линии"
+                // белые берут en passant с row==3, чёрные с row==4 (если 0 сверху)
+                boolean correctEpRank = sideWhite ? (fromRow == 3) : (fromRow == 4);
+
+                if (correctEpRank) {
+                    // LEFT
+                    int leftCol = fromCol - 1;
+                    if (leftCol >= 0) {
+                        Piece left = settledPieces[fromRow][leftCol];
+                        if (left instanceof Pawn pawn &&
+                            pawn.isJumped() &&
+                            pawn.isWhite() != sideWhite &&               // враг
+                            settledPieces[toRow][leftCol] == null) {     // диагональ пустая
+                            Cell to = new Cell(toRow, leftCol);
+                            Piece[][] pseudo = makePseudoMove(settledPieces, cell, to);
+                            if (!isKingCheck(pseudo, sideWhite)) {
+                                legalMoves.add(to);
+                            }
+                        }
+                    }
+
+                    // RIGHT
+                    int rightCol = fromCol + 1;
+                    if (rightCol < 8) {
+                        Piece right = settledPieces[fromRow][rightCol];
+                        if (right instanceof Pawn pawn &&
+                            pawn.isJumped() &&
+                            pawn.isWhite() != sideWhite &&
+                            settledPieces[toRow][rightCol] == null) {
+                            Cell to = new Cell(toRow, rightCol);
+                            Piece[][] pseudo = makePseudoMove(settledPieces, cell, to);
+                            if (!isKingCheck(pseudo, sideWhite)) {
+                                legalMoves.add(to);
+                            }
+                        }
                     }
                 }
             }
         }
-        System.out.println("legalMoves: " + legalMoves);
+
+        // 3) CASTLING (пока добавим оба направления для белых/чёрных)
+        if (pieceToCheck instanceof King king && !king.isWasMoved()) {
+            int row = sideWhite ? 7 : 0;
+
+            // король должен быть на стартовой клетке
+            if (cell.row() == row && cell.col() == 4) {
+
+                // король не должен быть под шахом сейчас
+                if (!isCellAttacked(settledPieces, new Cell(row, 4), !sideWhite)) {
+
+                    // Kingside: e -> g (col 4 -> 6), rook h -> f
+                    if (settledPieces[row][5] == null && settledPieces[row][6] == null) {
+                        Piece rook = settledPieces[row][7];
+                        if (rook instanceof Rook r && !r.isWasMoved() && rook.isWhite() == sideWhite) {
+                            if (!isCellAttacked(settledPieces, new Cell(row, 5), !sideWhite) &&
+                                !isCellAttacked(settledPieces, new Cell(row, 6), !sideWhite)) {
+                                // плюс шах-проверка через симуляцию (на всякий случай)
+                                Cell to = new Cell(row, 6);
+                                Piece[][] pseudo = makePseudoMove(settledPieces, cell, to);
+                                if (!isKingCheck(pseudo, sideWhite)) {
+                                    legalMoves.add(to);
+                                }
+                            }
+                        }
+                    }
+
+                    // Queenside: e -> c (col 4 -> 2), rook a -> d
+                    if (settledPieces[row][1] == null && settledPieces[row][2] == null && settledPieces[row][3] == null) {
+                        Piece rook = settledPieces[row][0];
+                        if (rook instanceof Rook r && !r.isWasMoved() && rook.isWhite() == sideWhite) {
+                            if (!isCellAttacked(settledPieces, new Cell(row, 3), !sideWhite) &&
+                                !isCellAttacked(settledPieces, new Cell(row, 2), !sideWhite)) {
+                                Cell to = new Cell(row, 2);
+                                Piece[][] pseudo = makePseudoMove(settledPieces, cell, to);
+                                if (!isKingCheck(pseudo, sideWhite)) {
+                                    legalMoves.add(to);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return legalMoves;
     }
+
 }

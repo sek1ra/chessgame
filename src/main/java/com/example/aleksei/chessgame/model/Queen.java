@@ -1,6 +1,5 @@
 package com.example.aleksei.chessgame.model;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class Queen extends Piece {
