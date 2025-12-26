@@ -15,9 +15,7 @@ public class Knight extends Piece {
 
     @Override
     public List<Cell> getPsevdoAvailableMoves(Piece[][] pieces, int row, int col) {
-        List<Cell> availMovies = new ArrayList<Cell>();
-        int startCol = col;
-        int startRow = row; 
+        List<Cell> availableMoves = new ArrayList<Cell>();
 
         int[][] cellsToCheck = {
             {-2, -1},
@@ -31,16 +29,16 @@ public class Knight extends Piece {
         };
         
         for (int i = 0; i < 8; i++) {
-            int rowToCheck = startRow + cellsToCheck[i][0];
-            int colToCheck = startCol +  + cellsToCheck[i][1];
-            if (rowToCheck >= 0 && colToCheck >= 0 && rowToCheck <= 7 && colToCheck <= 7 ) {
+            int rowToCheck = row + cellsToCheck[i][0];
+            int colToCheck = col + cellsToCheck[i][1];
+            if (rowToCheck >= 0 && colToCheck >= 0 && rowToCheck < 8 && colToCheck < 8 ) {
                 if (pieces[rowToCheck][colToCheck] == null || isWhite() != pieces[rowToCheck][colToCheck].isWhite()) {
-                    availMovies.add(new Cell(rowToCheck, colToCheck));
+                    availableMoves.add(new Cell(rowToCheck, colToCheck));
                 }
             }
         }
 
-        return availMovies;
+        return availableMoves;
     }
 
     @Override

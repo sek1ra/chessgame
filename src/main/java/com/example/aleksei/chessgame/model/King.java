@@ -47,7 +47,19 @@ public class King extends Piece {
 
     @Override
     public List<Cell> getAttackedCells(Piece[][] pieces, int row, int col) {
-        getPsevdoAvailableMoves(pieces, row, col);
-        return null;
+        List<Cell> result = new ArrayList<>();
+
+        int[] dirRow = {-1, -1, -1, 0, 1, 1, 1, 0};
+        int[] dirCol = {-1, 0, 1, 1, 1, 0, -1, -1};
+
+        for (int i = 0; i < 8; i++) {
+            int r = row + dirRow[i];
+            int c = col + dirCol[i];
+            if (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                result.add(new Cell(r, c));
+            }
+        }
+
+        return result;
     }
 }

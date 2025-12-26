@@ -50,31 +50,41 @@ public class Pawn extends Piece {
             direction = -1;
         }
 
-        if (Math.abs(startRow + 1*direction) < 7 && pieces[startRow + 1*direction][startCol] == null) {
-            availMovies.add(new Cell(startRow + 1*direction, startCol));
+        if (
+            startRow + direction < 8 && 
+            startRow + direction >= 0 && 
+            pieces[startRow + 1*direction][startCol] == null
+        ) {
+            availMovies.add(new Cell(startRow + direction, startCol));
         }
         if (!isWasMoved()) {
-            if (Math.abs(startRow + 2*direction) < 7 && pieces[startRow + 2*direction][startCol] == null && pieces[startRow + direction][startCol] == null) {
+            if (
+                startRow + 2*direction < 8 && 
+                pieces[startRow + 2*direction][startCol] == null && 
+                pieces[startRow + direction][startCol] == null
+            ) {
                 availMovies.add(new Cell(startRow + 2*direction, startCol));
             }
         }
 
         if (
-            Math.abs(startRow + 1*direction) < 7 && 
-            startCol+1 < 7 && 
-            pieces[startRow + 1*direction][startCol+1] != null && 
-            pieces[startRow + 1*direction][startCol+1].isWhite() != isWhite()
+            startRow + direction < 8 && 
+            startRow + direction >= 0 && 
+            startCol+1 < 8 && 
+            pieces[startRow + direction][startCol+1] != null && 
+            pieces[startRow + direction][startCol+1].isWhite() != isWhite()
         ) {
-            availMovies.add(new Cell(startRow + 1*direction, startCol+1));
+            availMovies.add(new Cell(startRow + direction, startCol+1));
         }
 
         if (
-            Math.abs(startRow + 1*direction) < 7 && 
+            startRow + direction < 8 && 
+            startRow + direction > 0 && 
             startCol-1 >= 0 && 
-            pieces[startRow + 1*direction][startCol-1] != null && 
-            pieces[startRow + 1*direction][startCol-1].isWhite() != isWhite()
+            pieces[startRow + direction][startCol-1] != null && 
+            pieces[startRow + direction][startCol-1].isWhite() != isWhite()
         ) {
-            availMovies.add(new Cell(startRow + 1*direction, startCol-1));
+            availMovies.add(new Cell(startRow + direction, startCol-1));
         }
 
         return availMovies;
