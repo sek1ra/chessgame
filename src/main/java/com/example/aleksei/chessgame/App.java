@@ -20,22 +20,13 @@ import javafx.scene.layout.BorderPane;
  */
 public class App extends Application {
     @Override
-    public void start(Stage stage) throws IOException {
+    public void start(Stage stage) {
         Game game = new Game();
         BoardView view = new BoardView();
         new GameController(game, view);
 
-        ListView<String> movesList = new ListView<>();
-        movesList.setPrefHeight(140);
-        movesList.setFocusTraversable(false);
-
-        BorderPane root = new BorderPane();
-        root.setCenter(view.getGridPane());
-        root.setBottom(movesList);
-
-        Scene scene = new Scene(root, 480, 620); // высота больше из-за полоски
+        Scene scene = new Scene(view.getRoot(), 480, 600);
         stage.setScene(scene);
-
         stage.setTitle("Chess Board");
         stage.show();
     }

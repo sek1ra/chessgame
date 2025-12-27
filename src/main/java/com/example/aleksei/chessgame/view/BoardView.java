@@ -19,12 +19,16 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.control.ListView;
+import javafx.scene.layout.BorderPane;
 
 public class BoardView implements IBoardView {
     Consumer<Cell> onCellClicked;
     private Button[][] buttons = new Button[8][8];
     GridPane grid = new GridPane();
     private final Map<String, Image> PIECESIMAGES;
+    private final ListView<String> moveList = new ListView<>();
+    private final BorderPane root = new BorderPane();
 
     public BoardView() {
         grid.setPrefSize(480, 480);
@@ -50,6 +54,9 @@ public class BoardView implements IBoardView {
                 grid.add(buttons[i][j], j, i);
             }
         }
+        moveList.setPrefHeight(120);
+        root.setCenter(grid);      // шахматная доска
+        root.setBottom(moveList);
     }
 
     @Override
@@ -171,11 +178,23 @@ public class BoardView implements IBoardView {
         return stack;
     }
 
+    public ListView<String> getMoveList() {
+        return moveList;
+    }
+
+    public void addMove(String moveText) {
+        moveList.getItems().add(moveText);
+    }
+
     public void showAlert(String title, String message) {
         Alert alert = new Alert(AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    public BorderPane getRoot() {
+        return root;
     }
 }

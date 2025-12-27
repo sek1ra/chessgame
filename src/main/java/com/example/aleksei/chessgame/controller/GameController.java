@@ -6,6 +6,7 @@ import com.example.aleksei.chessgame.model.Board;
 import com.example.aleksei.chessgame.model.Cell;
 import com.example.aleksei.chessgame.model.Game;
 import com.example.aleksei.chessgame.model.GameStatus;
+import com.example.aleksei.chessgame.model.MoveRecord;
 import com.example.aleksei.chessgame.model.Piece;
 import com.example.aleksei.chessgame.view.BoardView;
 import com.example.aleksei.chessgame.model.MoveResult;
@@ -43,6 +44,10 @@ public class GameController {
             MoveResult moveResult = game.tryMove(clickedCell);
             if (moveResult.moved()) {
                 view.draw(board.getSettledPieces());
+
+                if (moveResult.moveText() != null) {
+                    view.addMove(moveResult.moveText());
+                }
 
                 if (moveResult.status() == GameStatus.CHECKMATE) {
                     String message = "CHECKMATE! ";
