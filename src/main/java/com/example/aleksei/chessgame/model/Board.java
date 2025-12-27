@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Board {
-    private Piece[][] settledPieces = new Piece[8][8];
+    static final int BOARD_SIZE = 8;
+    private Piece[][] settledPieces = new Piece[BOARD_SIZE][BOARD_SIZE];
     private Cell activeCell;
 
     public Board() {
@@ -29,14 +30,14 @@ public class Board {
      */
     public void initSettlePieces() {
         //reset board
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
                 settledPieces[i][j] = null;
             }
         }
 
         //set Pawn
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < BOARD_SIZE; i++) {
             settledPieces[6][i] = new Pawn(true);
             settledPieces[1][i] = new Pawn(false);
         }
@@ -79,9 +80,9 @@ public class Board {
      * @return copied board array
      */
     private Piece[][] copyBoard(Piece[][] board) {
-        Piece[][] copy = new Piece[8][8];
-        for (int r = 0; r < 8; r++) {
-            System.arraycopy(board[r], 0, copy[r], 0, 8);
+        Piece[][] copy = new Piece[BOARD_SIZE][BOARD_SIZE];
+        for (int r = 0; r < BOARD_SIZE; r++) {
+            System.arraycopy(board[r], 0, copy[r], 0, BOARD_SIZE);
         }
         return copy;
     }
@@ -201,8 +202,8 @@ public class Board {
      * Called before executing a new move.
      */
     private void resetJumpFlagsExcept() {
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
+        for (int r = 0; r < BOARD_SIZE; r++) {
+            for (int c = 0; c < BOARD_SIZE; c++) {
                 Piece p = settledPieces[r][c];
                 if (p instanceof Pawn pawn ) {//&& p != current
                     pawn.setIsJumped(false);
@@ -217,9 +218,9 @@ public class Board {
      *
      * @param board board state to print
      */
-    void printBoard(Piece[][] board) {
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
+    private void printBoard(Piece[][] board) {
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 0; col < BOARD_SIZE; col++) {
                 if (board[row][col] == null) {
                     System.out.print("__ ");
                 } else {
@@ -238,8 +239,8 @@ public class Board {
      * @return true if the king is in check, false otherwise
      */
     public boolean isKingCheck(Piece[][] pieces, boolean isWhiteKingChecked) {
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 0; col < BOARD_SIZE; col++) {
                 Piece p = pieces[row][col];
                 if (p instanceof King && p.isWhite() == isWhiteKingChecked) {
                     return isCellAttacked(pieces, new Cell(row, col), !isWhiteKingChecked);
@@ -258,13 +259,33 @@ public class Board {
      * @return true if the cell is attacked, false otherwise
      */
     private boolean isCellAttacked(Piece[][] pieces, Cell cell, boolean attackedByWhite) {
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 0; col < BOARD_SIZE; col++) {
                 Piece attacker = pieces[row][col];
                 if (attacker != null && attacker.isWhite() == attackedByWhite ) {
                     List<Cell> attackedCells = attacker.getAttackedCells(pieces, row, col);
 
                     if (attackedCells != null && attackedCells.contains(cell)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+    * Checks whether there is any legal move for the specified color.
+    * @param whiteToCheck true to check for any legal move for the white pieces, false for the black ones
+    * @return true if there is any legal move, false otherwise
+    */
+    public boolean hasAnyLegalMoves(boolean whiteToCheck) {
+        for (int r = 0; r < BOARD_SIZE; r++) {
+            for (int c = 0; c < BOARD_SIZE; c++) {
+                Piece piece = settledPieces[r][c];
+                if (piece != null && piece.isWhite() == whiteToCheck) {
+                    List<Cell> availableMoves = getLegalMoves(new Cell(r, c));
+                    if (!availableMoves.isEmpty()) {
                         return true;
                     }
                 }
@@ -305,7 +326,7 @@ public class Board {
             int toRow = fromRow + direction;
 
             // row bounds
-            if (toRow >= 0 && toRow < 8) {
+            if (toRow >= 0 && toRow < BOARD_SIZE) {
 
                 // рекомендованная проверка "правильной линии"
                 // белые берут en passant с row==3, чёрные с row==4 (если 0 сверху)
@@ -330,7 +351,7 @@ public class Board {
 
                     // RIGHT
                     int rightCol = fromCol + 1;
-                    if (rightCol < 8) {
+                    if (rightCol < BOARD_SIZE) {
                         Piece right = settledPieces[fromRow][rightCol];
                         if (right instanceof Pawn pawn &&
                             pawn.isJumped() &&

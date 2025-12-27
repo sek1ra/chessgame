@@ -5,8 +5,10 @@ import java.util.List;
 import com.example.aleksei.chessgame.model.Board;
 import com.example.aleksei.chessgame.model.Cell;
 import com.example.aleksei.chessgame.model.Game;
+import com.example.aleksei.chessgame.model.GameStatus;
 import com.example.aleksei.chessgame.model.Piece;
 import com.example.aleksei.chessgame.view.BoardView;
+import com.example.aleksei.chessgame.model.MoveResult;
 
 public class GameController {
     private final Board board;
@@ -22,6 +24,9 @@ public class GameController {
     }
 
     public void handleCellClick(Cell clickedCell) {
+        if (!game.isGameActive()) {
+            return;
+        }
         Piece clickedPiece = board.getPieceByCell(clickedCell);
         //clicked on piece the same color as current move color
         if (clickedPiece != null && clickedPiece.isWhite() == game.isWhiteMove()) {
@@ -30,10 +35,27 @@ public class GameController {
             List<Cell> availMovies = board.getLegalMoves(clickedCell);
             view.highlightMoves(availMovies);
         } else {//clicked on empty field or piece of the opponent
-            if (board.move(clickedCell)) {
+            if (board.getActiveCell() == null) {
+                view.clearSelection();
+                return;
+            }
+
+            MoveResult moveResult = game.tryMove(clickedCell);
+            if (moveResult.moved()) {
                 view.draw(board.getSettledPieces());
-                game.switchTurn();
-                board.setActiveCell(null);
+
+                if (moveResult.status() == GameStatus.CHECKMATE) {
+                    String message = "CHECKMATE! ";
+                    if (moveResult.winnerIsWhite()) {
+                        message += "Winner is White";
+                    } else {
+                        message += "Winner is Black";
+                    }
+                    view.showAlert("Warning!", message);
+                } else if (moveResult.status() == GameStatus.STALEMATE) {
+                    String message = "STALEMATE!";
+                    view.showAlert("Warning!", message);
+                }
             }
             view.clearSelection();
         }
