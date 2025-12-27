@@ -23,6 +23,9 @@ public class MoveRecord {
     public boolean wasEnPassant;
     public Piece enPassantPawn;
     public Cell enPassantPawnCell;
+    // previous en-passant state (before move)
+    public Pawn prevJumpedPawn;
+    public Cell prevJumpedPawnCell;
 
     // promotion
     public boolean wasPromotion;

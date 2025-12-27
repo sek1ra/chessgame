@@ -2,17 +2,11 @@ package com.example.aleksei.chessgame;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
-
-import java.io.IOException;
 
 import com.example.aleksei.chessgame.controller.GameController;
 import com.example.aleksei.chessgame.model.Game;
 import com.example.aleksei.chessgame.view.BoardView;
-
-import javafx.scene.control.ListView;
-import javafx.scene.layout.BorderPane;
 
 
 /**

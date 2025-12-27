@@ -22,6 +22,12 @@ public class GameController {
         this.view = view;
         this.view.draw(board.getSettledPieces());
         view.setOnCellClicked(this::handleCellClick);
+        view.setOnRedoClicked(this::handleRedo);
+        view.setOnUndoClicked(this::handleUndo);
+    }
+
+    private void handleRedo() {
+        System.out.println("Redo clicked");
     }
 
     public void handleCellClick(Cell clickedCell) {
@@ -64,5 +70,14 @@ public class GameController {
             }
             view.clearSelection();
         }
+    }
+
+    private void handleUndo() {
+        MoveRecord r = game.undoLastMove();
+        if (r == null) return;
+
+        view.draw(board.getSettledPieces());
+        view.removeLastMove(); // добавь метод во View: moveList.getItems().remove(size-1)
+        view.clearSelection();
     }
 }

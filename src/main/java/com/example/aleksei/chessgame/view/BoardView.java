@@ -17,6 +17,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.control.ListView;
@@ -29,6 +30,8 @@ public class BoardView implements IBoardView {
     private final Map<String, Image> PIECESIMAGES;
     private final ListView<String> moveList = new ListView<>();
     private final BorderPane root = new BorderPane();
+    private final Button redoButton = new Button("Redo");
+    private final Button undoButton = new Button("Undo");
 
     public BoardView() {
         grid.setPrefSize(480, 480);
@@ -57,6 +60,15 @@ public class BoardView implements IBoardView {
         moveList.setPrefHeight(120);
         root.setCenter(grid);      // шахматная доска
         root.setBottom(moveList);
+
+        redoButton.setPrefWidth(100);
+        undoButton.setPrefWidth(100);
+
+        VBox bottomPanel = new VBox(5);
+        bottomPanel.getChildren().addAll(moveList, undoButton, redoButton);
+
+        root.setCenter(grid);
+        root.setBottom(bottomPanel);
     }
 
     @Override
@@ -115,20 +127,8 @@ public class BoardView implements IBoardView {
                 buttons[k][l].getStyleClass().remove("cellActive");
                 buttons[k][l].getStyleClass().remove("cellAvailable");
 
-                /*Node graphic = buttons[k][l].getGraphic();
-                System.out.println(graphic.getClass());
-                if (graphic instanceof Circle) {
-                    buttons[k][l].setGraphic(null);
-                }*/
-
                 if (buttons[k][l].getGraphic() instanceof StackPane) {
                     StackPane pane = (StackPane) buttons[k][l].getGraphic();
-                    /*for (Node child : pane.getChildren()) {
-                        if (child instanceof Circle) {
-                            buttons[k][l].setGraphic(null);
-                            break;
-                        }
-                    }*/
                     pane.getChildren().removeIf(node -> node instanceof Circle);
                 }
             }
@@ -196,5 +196,20 @@ public class BoardView implements IBoardView {
 
     public BorderPane getRoot() {
         return root;
+    }
+
+    public void setOnRedoClicked(Runnable handler) {
+        redoButton.setOnAction(e -> handler.run());
+    }
+
+    public void setOnUndoClicked(Runnable handler) {
+        undoButton.setOnAction(e -> handler.run());
+    }
+
+    public void removeLastMove() {
+        int size = moveList.getItems().size();
+        if (size > 0) {
+            moveList.getItems().remove(size - 1);
+        }
     }
 }

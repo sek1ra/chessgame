@@ -9,6 +9,7 @@ public class Game {
     private Board board;
     private GameStatus status;
     private final Deque<MoveRecord> moves = new ArrayDeque<>();
+    private final Deque<MoveRecord> redo = new ArrayDeque<>();
 
     public Game() {
         isGameActive = true;
@@ -122,31 +123,29 @@ public class Game {
             record.pawnBeforePromotion = mover;
         }
 
+        capturePrevJumpedPawn(record);
+
         return record;
     }
 
 
     public MoveResult tryMove(Cell to) {
         MoveRecord record = initMoveRecord(to);
-        if (record == null) {
-            return new MoveResult(false, status, null, null);
-        }
+        if (record == null) return new MoveResult(false, status, null, null);
 
-        if (!board.move(to)) {
-            return new MoveResult(false, status, null, null);
-        }
+        if (!board.move(to)) return new MoveResult(false, status, null, null);
 
-        // promotion: AFTER move we can capture the new piece
         if (record.wasPromotion) {
             record.promotedTo = board.getSettledPieces()[to.row()][to.col()];
         }
 
         moves.push(record);
+        redo.clear();
 
         board.setActiveCell(null);
         switchTurn();
 
-        boolean sideToMove = isWhiteMove;
+        boolean sideToMove = isWhiteMove(); // лучше через метод
         boolean hasMoves = board.hasAnyLegalMoves(sideToMove);
         boolean inCheck = board.isKingCheck(board.getSettledPieces(), sideToMove);
 
@@ -156,7 +155,7 @@ public class Game {
             if (inCheck) {
                 status = GameStatus.CHECKMATE;
                 isGameActive = false;
-                winnerIsWhite = !sideToMove; // winner is the side that is NOT to move
+                winnerIsWhite = !sideToMove;
             } else {
                 status = GameStatus.STALEMATE;
                 isGameActive = false;
@@ -165,9 +164,9 @@ public class Game {
             status = inCheck ? GameStatus.CHECK : GameStatus.RUNNING;
         }
 
-        String moveText = formatMove(record);
-        return new MoveResult(true, status, winnerIsWhite, moveText);
+        return new MoveResult(true, status, winnerIsWhite, formatMove(record));
     }
+
 
     public static String formatMove(MoveRecord r) {
 
@@ -227,5 +226,91 @@ public class Game {
     private static char rankChar(int row) {
         return (char) ('8' - row);
     }
+
+    private void capturePrevJumpedPawn(MoveRecord r) {
+        Piece[][] b = board.getSettledPieces();
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Piece p = b[row][col];
+                if (p instanceof Pawn pawn && pawn.isJumped()) {
+                    r.prevJumpedPawn = pawn;
+                    r.prevJumpedPawnCell = new Cell(row, col);
+                    return;
+                }
+            }
+        }
+    }
+
+    public MoveRecord undoLastMove() {
+        System.out.println("UNDO pressed, moves size = " + moves.size());
+        if (moves.isEmpty()) return null;
+
+        MoveRecord r = moves.pop();
+        redo.push(r);
+
+        Piece[][] b = board.getSettledPieces();
+
+        int fromR = r.from.row();
+        int fromC = r.from.col();
+        int toR   = r.to.row();
+        int toC   = r.to.col();
+
+        // 1) jumped flags: очистить и восстановить состояние "до хода"
+        clearAllJumpedFlags(b);
+        if (r.prevJumpedPawn != null) {
+            r.prevJumpedPawn.setIsJumped(true);
+        }
+
+        // 2) Вычисляем фигуру, которую надо поставить обратно на from
+        // promotion: возвращаем пешку (pawnBeforePromotion)
+        Piece pieceBack = r.wasPromotion ? r.pawnBeforePromotion : r.movedPiece;
+
+        // 3) Убираем фигуру с клетки to (там может стоять promotedTo и т.п.)
+        b[toR][toC] = null;
+
+        // 4) Ставим ходившую фигуру обратно на from и восстанавливаем wasMoved
+        b[fromR][fromC] = pieceBack;
+        if (pieceBack != null) {
+            pieceBack.setWasMoved(r.movedPieceWasMoved);
+        }
+
+        // 5) Вернуть обычное взятие
+        if (r.capturedPiece != null && r.capturedCell != null) {
+            b[r.capturedCell.row()][r.capturedCell.col()] = r.capturedPiece;
+        }
+
+        // 6) Вернуть en passant жертву
+        if (r.wasEnPassant && r.enPassantPawn != null && r.enPassantPawnCell != null) {
+            b[r.enPassantPawnCell.row()][r.enPassantPawnCell.col()] = r.enPassantPawn;
+        }
+
+        // 7) Вернуть ладью при рокировке
+        if (r.wasCastling && r.rookPiece != null && r.rookFrom != null && r.rookTo != null) {
+            b[r.rookTo.row()][r.rookTo.col()] = null;
+            b[r.rookFrom.row()][r.rookFrom.col()] = r.rookPiece;
+            r.rookPiece.setWasMoved(r.rookWasMoved);
+        }
+
+        // 8) ход назад
+        switchTurn();
+        board.setActiveCell(null);
+        setGameActive(true);
+
+        boolean sideToMove = isWhiteMove();
+        boolean inCheck = board.isKingCheck(board.getSettledPieces(), sideToMove);
+        setStatus(inCheck ? GameStatus.CHECK : GameStatus.RUNNING);
+
+        return r;
+    }
+
+    private void clearAllJumpedFlags(Piece[][] b) {
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                Piece p = b[r][c];
+                if (p instanceof Pawn pawn) pawn.setIsJumped(false);
+            }
+        }
+    }
+
 
 }
